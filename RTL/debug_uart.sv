@@ -5,12 +5,16 @@
 //
 
 module debug_uart #(
-    parameter  UART_RX_CLK_DIV = 108, // 50MHz/4/115200Hz=108
-    parameter  UART_TX_CLK_DIV = 434, // 50MHz/1/115200Hz=434
+    parameter  UART_RX_CLK_DIV = 108, // UART baud rate = clk freq/(4*UART_RX_CLK_DIV)
+                                      // modify UART_RX_CLK_DIV to change the UART baud
+                                      // for example, when clk=125MHz, UART_RX_CLK_DIV=271, then baud=125MHz/(4*271)=115200
+    parameter  UART_TX_CLK_DIV = 1085,// UART baud rate = clk freq/(UART_TX_CLK_DIV)
+                                      // modify UART_TX_CLK_DIV to change the UART baud
+                                      // for example, when clk=125MHz, UART_TX_CLK_DIV=1085, then baud=125MHz/1085=115200
     parameter  WRITE_TIMEOUT   = 200, // wait for wgnt cycles
     parameter  READ_TIMEOUT    = 200, // wait for rgnt cycles
-    parameter  ADDR_BYTE_WIDTH = 4,
-    parameter  DATA_BYTE_WIDTH = 4,
+    parameter  ADDR_BYTE_WIDTH = 4,   // address width = 4bytes = 32bits
+    parameter  DATA_BYTE_WIDTH = 4,   // data width = 4bytes = 32bits
     parameter  bit READ_IMM    = 0    // 0: read after rgnt : Capture rdata in the next clock cycle of rgnt=1
                                       // 1: read immediately: Capture rdata in the clock cycle of rgnt=1
 )(
@@ -24,7 +28,7 @@ module debug_uart #(
     output logic rreq,
     input  logic rgnt,
     output logic [ADDR_BYTE_WIDTH*8-1:0] raddr,
-    input  logic [DATA_BYTE_WIDTH*8-1:0] rdata, // NOTE: rdata will app
+    input  logic [DATA_BYTE_WIDTH*8-1:0] rdata,
     
     input  logic uart_rx,
     output logic uart_tx
