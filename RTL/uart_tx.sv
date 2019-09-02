@@ -116,10 +116,10 @@ always @ (posedge clk or negedge rst_n)
         end
     end
 
-ram #(
+ram_for_uart_tx_fifo #(
     .ADDR_LEN  ( FIFO_ASIZE       ),
     .DATA_LEN  ( BYTE_WIDTH*8     )
-) ram_for_uart_tx_fifo_inst(
+) ram_for_uart_tx_fifo_inst (
     .clk       ( clk              ),
     .wr_req    ( wgnt             ),
     .wr_addr   ( fifo_wr_pointer  ),
@@ -135,7 +135,7 @@ endmodule
 
 
 
-module ram #(
+module ram_for_uart_tx_fifo #(
     parameter ADDR_LEN = 12,
     parameter DATA_LEN = 8
 ) (
@@ -148,15 +148,15 @@ module ram #(
 
 localparam  RAM_SIZE = (1<<ADDR_LEN);
 
-logic [DATA_LEN-1:0] ram [RAM_SIZE];
+logic [DATA_LEN-1:0] mem [RAM_SIZE];
 
 initial rd_data = 0;
 
 always @ (posedge clk)
-    rd_data <= ram[rd_addr];
+    rd_data <= mem[rd_addr];
 
 always @ (posedge clk)
     if(wr_req)
-        ram[wr_addr] <= wr_data;
+        mem[wr_addr] <= wr_data;
 
 endmodule

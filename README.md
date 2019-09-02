@@ -3,10 +3,11 @@
 
 Verilog-UART
 ===========================
-包含3种可独立使用的模块：
+包含4种可独立使用的模块：
 
 * **UART接收器**：[./RTL/uart_rx.sv](https://github.com/WangXuan95/Verilog-UART/blob/master/RTL/uart_rx.sv)
 * **UART发送器**：[./RTL/uart_tx.sv](https://github.com/WangXuan95/Verilog-UART/blob/master/RTL/uart_tx.sv)
+* **UART发送器(AXI-stream接口)**：[./RTL/axi_stream_to_uart_tx.sv](https://github.com/WangXuan95/Verilog-UART/blob/master/RTL/axi_stream_to_uart_tx.sv)
 * **UART交互式调试器**：[./RTL/debug_uart.sv](https://github.com/WangXuan95/Verilog-UART/blob/master/RTL/debug_uart.sv)
 
 # UART接收器
@@ -49,6 +50,11 @@ UART发送器的源文件是 [./RTL/uart_tx.sv](https://github.com/WangXuan95/Ve
 ### 示例
 
 uart_tx 的示例在路径 [./Arty-examples/uart_tx](https://github.com/WangXuan95/Verilog-UART/blob/master/Arty-examples/uart_tx)，该示例基于 [Arty开发板](http://www.digilent.com.cn/products/product-arty-board-artix-7-fpga-development-board-for-makers-and-hobbyists.html)。该示例循环向上位机发送 arty 开发板上按键和开关的信息，拨动按键和开关可以看到发送数据的变化。
+
+# UART发送器(AXI-stream接口)
+
+源文件是 [./RTL/axi_stream_to_uart_tx.sv](https://github.com/WangXuan95/Verilog-UART/blob/master/RTL/axi_stream_to_uart_tx.sv) ，该UART发送器接收 AXI-stream 形式的数据，并通过 UART 以十六进制数的形式打印出来。AXI-stream中相邻的数在UART发送时会以空格隔开，AXI-stream的tlast信号会导致UART打印一个\\n。
+
 
 # UART交互式调试器
 
