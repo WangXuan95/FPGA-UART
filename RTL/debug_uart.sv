@@ -53,7 +53,7 @@ end
 logic [31:0] bus_time = '0;
 logic [ADDR_BYTE_WIDTH*8-1:0] taddr = '0;
 logic [DATA_BYTE_WIDTH*8-1:0] wdatareg = '0;
-logic [10*(TX_LEN+1)-1:0] txdata = '0;
+logic [MSG_LEN*(TX_LEN+1)-1:0] txdata = '0;
 logic [31:0] txcnt = '0;
 logic [31:0] txcyclecnt = '0;
 enum  {NEW, ADDR, EQUAL, DATA, FINAL, TRASH, READ, READOUT, WRITE, UARTTX} fsm = NEW;

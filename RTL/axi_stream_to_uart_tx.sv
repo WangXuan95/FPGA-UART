@@ -69,7 +69,7 @@ always @ (posedge aclk or negedge aresetn)
                     uart_tx <= 1'b0;
                     hexcnt <= hexcnt-1;
                     if(hexcnt>1)
-                        txshift <= hex2ascii(data[(hexcnt-1)*4+:4]);
+                        txshift <= hex2ascii(data[(hexcnt-2)*4+:4]);
                     else if(endofline)
                         txshift <= "\n";
                     else
