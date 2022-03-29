@@ -1,65 +1,96 @@
-`timescale 1ns/1ns
+
+//--------------------------------------------------------------------------------------------------------
+// Module  : uart_rx
+// Type    : synthesizable, IP's top
+// Standard: SystemVerilog 2005 (IEEE1800-2005)
+// Function: convert UART RX signal to bytes
+// UART format: 8 data bits
+//--------------------------------------------------------------------------------------------------------
 
 module uart_rx #(
-    parameter CLK_DIV = 108  // UART baud rate = clk freq/(4*CLK_DIV)
-                             // modify CLK_DIV to change the UART baud
-                             // for example, when clk=125MHz, CLK_DIV=271, then baud=125MHz/(4*271)=115200
-                             // 115200 is a typical baud rate for UART
+    parameter CLK_DIV = 434,     // UART baud rate = clk freq/CLK_DIV. for example, when clk=50MHz, CLK_DIV=434, then baud=50MHz/434=115200
+    parameter PARITY  = "NONE"   // "NONE", "ODD" or "EVEN"
 ) (
-    input  logic clk, rst_n,
-    // uart rx input
-    input  logic rx,
+    input  wire       rstn,
+    input  wire       clk,
+    // uart rx input signal
+    input  wire       i_uart_rx,
     // user interface
-    output logic done,
-    output logic [7:0] data
+    output reg  [7:0] rx_data,
+    output reg        rx_en
 );
 
-initial done = 1'b0;
-initial data = '0;
+initial {rx_data, rx_en} = '0;
 
-reg [31:0] cnt = '0;
-reg [ 7:0] databuf='0;
-reg [ 5:0] status='0, shift='0;
-reg rxr=1'b1;
-wire recvbit = (shift[1]&shift[0]) | (shift[0]&rxr) | (rxr&shift[1]) ;
 
-always @ (posedge clk or negedge rst_n)
-    if(~rst_n)
-        rxr <= 1'b1;
+reg        rxbuff = 1'b1;
+
+always @ (posedge clk or negedge rstn)
+    if(~rstn)
+        rxbuff <= 1'b1;
     else
-        rxr <= rx;
+        rxbuff <= i_uart_rx;
 
-always @ (posedge clk or negedge rst_n)
-    if(~rst_n) begin
-        done     = 1'b0;
-        data    <= '0;
-        status   = '0;
-        shift   <= '0;
-        databuf <= '0;
-        cnt      = '0;
+
+
+
+reg [31:0] cyc = 0;
+reg        cycend = 1'b0;
+reg [ 5:0] rxshift = '0;
+
+wire rbit = rxshift[2] & rxshift[1] | rxshift[1] & rxshift[0] | rxshift[2] & rxshift[0] ;
+
+always @ (posedge clk or negedge rstn)
+    if(~rstn) begin
+        cyc <= 0;
+        cycend <= 1'b0;
+        rxshift <= '0;
     end else begin
-        done = 1'b0;
-        if( (++cnt) >= CLK_DIV ) begin
-            if(status==0) begin
-                if(shift == 6'b111_000)
-                    status <= 1;
-            end else begin
-                if(status[5] == 1'b0) begin
-                    if(status[1:0] == 2'b11)
-                        databuf <= {recvbit, databuf[7:1]};
-                    status <= status + 5'b1;
-                end else begin
-                    if(status<62) begin
-                        status = 62;
-                        data <= databuf;
-                        done = 1'b1;
-                    end else begin
-                        status = status + 6'd1;
+        cyc <= (cyc+1<CLK_DIV) ? cyc + 1 : 0;
+        cycend <= 1'b0;
+        if( cyc == (CLK_DIV/4)*0 || cyc == (CLK_DIV/4)*1 || cyc == (CLK_DIV/4)*2 || cyc == (CLK_DIV/4)*3 ) begin
+            cycend <= 1'b1;
+            rxshift <= {rxshift[4:0], rxbuff};
+        end
+    end
+
+
+
+
+reg [4:0] cnt = '0;
+enum logic [2:0] {S_IDLE, S_DATA, S_PARI, S_OKAY, S_FAIL} stat = S_IDLE;
+
+always @ (posedge clk or negedge rstn)
+    if(~rstn) begin
+        {rx_data, rx_en} <= '0;
+        cnt  <= '0;
+        stat <= S_IDLE;
+    end else begin
+        rx_en <= 1'b0;
+        if( cycend ) begin
+            case(stat)
+                S_IDLE: begin
+                    cnt <= '0;
+                    if(rxshift == 6'b111_000) stat <= S_DATA;
+                end
+                S_DATA: begin
+                    cnt <= cnt + 6'd1;
+                    if(cnt[1:0] == '1) rx_data <= {rbit, rx_data[7:1]};
+                    if(cnt      == '1) stat <= (PARITY=="NONE") ? S_OKAY : S_PARI;
+                end
+                S_PARI: begin
+                    cnt <= cnt + 6'd1;
+                    if(cnt[1:0] == '1) stat <=((PARITY=="EVEN") ^ rbit ^ (^rx_data)) ? S_OKAY : S_FAIL;
+                end
+                S_OKAY: begin
+                    cnt <= cnt + 6'd1;
+                    if(cnt[1:0] == '1) begin
+                        rx_en <= rbit;
+                        stat <= rbit ? S_IDLE : S_FAIL;
                     end
                 end
-            end
-            shift <= {shift[4:0], rxr};
-            cnt = '0;
+                S_FAIL: if(rxshift[2:0] == '1) stat <= S_IDLE;
+            endcase
         end
     end
 

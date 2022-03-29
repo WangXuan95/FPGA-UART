@@ -1,82 +1,160 @@
-![test](https://img.shields.io/badge/test-passing-green.svg)
-![docs](https://img.shields.io/badge/docs-passing-green.svg)
+![语言](https://img.shields.io/badge/语言-systemverilog_(IEEE1800_2005)-CAD09D.svg) ![仿真](https://img.shields.io/badge/仿真-iverilog-green.svg) ![部署](https://img.shields.io/badge/部署-quartus-blue.svg) ![部署](https://img.shields.io/badge/部署-vivado-FF1010.svg)
 
 Verilog-UART
 ===========================
-包含4种可独立使用的模块：
+本库包含3种可独立使用的模块：
 
-* **UART接收器**：[./RTL/uart_rx.sv](./RTL/uart_rx.sv)
-* **UART发送器**：[./RTL/uart_tx.sv](./RTL/uart_tx.sv)
-* **UART发送器(AXI-stream接口)**：[./RTL/axi_stream_to_uart_tx.sv](./RTL/axi_stream_to_uart_tx.sv)
-* **UART交互式调试器**：[./RTL/debug_uart.sv](./RTL/debug_uart.sv)
+* **UART接收器**：[RTL/uart_rx.sv](./RTL/uart_rx.sv)
+* **UART发送器**：[RTL/uart_tx.sv](./RTL/uart_tx.sv)
+* **UART交互式调试器**：[RTL/debug_uart.sv](./RTL/debug_uart.sv)
 
-# UART接收器
 
-UART接收器的源文件是 [./RTL/uart_rx.sv](./RTL/uart_rx.sv) ，接口定义如下：
 
-```SystemVerilog
+# UART接收器 uart_rx
+
+UART接收器的代码文件是 [RTL/uart_rx.sv](./RTL/uart_rx.sv) ，定义如下：
+
+```verilog
 module uart_rx #(
-    parameter CLK_DIV = 108  // UART波特率 = clk频率/(4*CLK_DIV)
-                             // 修改 CLK_DIV 可改变 UART 波特率
-                             // 例如, 当 clk=125MHz, CLK_DIV=271 时，波特率 =125MHz/(4*271)=115200
+    parameter CLK_DIV = 434,     // UART baud rate = clk freq/CLK_DIV. for example, when clk=50MHz, CLK_DIV=434, then baud=50MHz/434=115200
+    parameter PARITY  = "NONE"   // "NONE", "ODD" or "EVEN"
 ) (
-    input  logic clk, rst_n, // 时钟和复位，
-                             // 请根据clk的实际频率修改 parameter CLK_DIV 以适应实际的波特率
-                             // 复位为低电平复位
-
-    input  logic rx,         // UART RX 信号
-
-    output logic done,       // 若某个clk周期，done=1，说明已接收到一个字节，
-    output logic [7:0] data  // 若某个clk周期，done=1，则data有效，data即为接收到的字节
+    input  wire       rstn,
+    input  wire       clk,
+    // uart rx input signal
+    input  wire       i_uart_rx,
+    // user interface
+    output reg  [7:0] rx_data,
+    output reg        rx_en
 );
 ```
 
-**done和data信号** 的时序图如下，当done=1时，说明模块接收到一个UART数据，data有效（此时可以被捕获），data将会持续保持有效直到下一个done=1来临。
+其中：
 
-![时序图](./images/uart_rx.png)
-
-### 示例
-
-uart_rx 的示例在路径 [./Arty-examples/uart_rx](./Arty-examples/uart_rx)，该示例基于 [Arty开发板](http://www.digilent.com.cn/products/product-arty-board-artix-7-fpga-development-board-for-makers-and-hobbyists.html)。当用户使用上位机发送一个字节到开发板时，开发板上的8个LED灯显示出该字节的二进制数。
-
-# UART发送器
-
-UART发送器的源文件是 [./RTL/uart_tx.sv](./RTL/uart_tx.sv) 。UART发送器内部有一个FIFO，缓存暂时未发送的数据。所以，发送数据的方式是向FIFO中写入数据。写FIFO的时序图如下，该时序图中连续向FIFO写入了5个字节，期间wreq置1，代表持续的写入请求，前四个字节时rgnt=1，说明它们在一个周期内就成功写入。第5个字节时rgnt=0，说明FIFO满了（因为UART的发送速度远不如FIFO的写入速度），则wreq和wdata要持续保持直到wgnt=1为止，第5个字节才被成功写入。
-
-![时序图](./images/uart_tx.png)
-
-另外，UART发送器还支持多种功能： **位宽定制** ， **大小端序控制** ， **HEX模式与ASCII模式** 。详见 [uart_tx.sv](./RTL/uart_tx.sv) 中的注释
-
-### 示例
-
-uart_tx 的示例在路径 [./Arty-examples/uart_tx](./Arty-examples/uart_tx)，该示例基于 [Arty开发板](http://www.digilent.com.cn/products/product-arty-board-artix-7-fpga-development-board-for-makers-and-hobbyists.html)。该示例循环向上位机发送 arty 开发板上按键和开关的信息，拨动按键和开关可以看到发送数据的变化。
-
-# UART发送器(AXI-stream接口)
-
-源文件是 [./RTL/axi_stream_to_uart_tx.sv](./RTL/axi_stream_to_uart_tx.sv) ，该UART发送器接收 AXI-stream 形式的数据，并通过 UART 以十六进制数的形式打印出来。AXI-stream中相邻的数在UART发送时会以空格隔开，AXI-stream的tlast信号会导致UART打印一个\\n。
+- CLK_DIV 是分频系数，决定了 UART波特率， UART波特率 = clk频率 / CLK_DIV 。
+- PARITY 决定了校验位，"NONE"是无校验位，"ODD"是奇校验位，"EVEN"是偶校验位。
+- rstn 是复位，在开始时让 rstn=0 来复位，然后让 rstn=1 释放复位。
+- clk 是时钟。
+- i_uart_rx 是 UART 接收信号。
+- **rx_data 和 rx_en 信号**：当 rx_en=1 时，说明模块接收到一个字节的 UART 数据，同时该字节在 rx_data 有效（此时可以被捕获），data将会持续保持有效直到下一个done=1来临。
 
 
-# UART交互式调试器
 
-UART交互式调试器的源文件是 [./RTL/debug_uart.sv](./RTL/debug_uart.sv)，它能接收上位机的命令，完成总线读写、存储器读写，并将结果反馈给上位机。是调试FPGA存储器或SoC系统的有效工具。
+# UART发送器 uart_tx
 
-UART交互式调试器 的示例在路径 [./Arty-examples/debug_uart](./Arty-examples/debug_uart)，该示例基于 [Arty开发板](http://www.digilent.com.cn/products/product-arty-board-artix-7-fpga-development-board-for-makers-and-hobbyists.html)。该示例将debug_uart与一个BRAM连在一起，我们可以通过UART命令的方式来读写BRAM。
+UART发送器的代码文件是 [RTL/uart_tx.sv](./RTL/uart_tx.sv) ，定义如下：
 
-上传该示例后，在上位机的串口调试助手等软件中：
+```verilog
+module uart_tx #(
+    parameter CLK_DIV     = 434,       // UART baud rate = clk freq/CLK_DIV. for example, when clk=50MHz, CLK_DIV=434, then baud=50MHz/434=115200
+    parameter PARITY      = "NONE",    // "NONE", "ODD" or "EVEN"
+    parameter ASIZE       = 10,        // UART TX buffer size = 2^ASIZE bytes, Set it smaller if your FPGA doesn't have enough BRAM
+    parameter DWIDTH      = 1,         // Specify width of tx_data , that is, how many bytes can it input per clock cycle
+    parameter ENDIAN      = "LITTLE",  // "LITTLE" or "BIG". when DWIDTH>=2, this parameter determines the byte order of tx_data
+    parameter MODE        = "RAW",     // "RAW", "PRINTABLE", "HEX" or "HEXSPACE"
+    parameter END_OF_DATA = "",        // Specify a extra send byte after each tx_data. when ="", do not send this extra byte
+    parameter END_OF_PACK = ""         // Specify a extra send byte after each tx_data with tx_last=1. when ="", do not send this extra byte
+)(
+    input  wire                rstn,
+    input  wire                clk,
+    // user interface
+    input  wire [DWIDTH*8-1:0] tx_data,
+    input  wire                tx_last,
+    input  wire                tx_en,
+    output wire                tx_rdy,
+    // uart tx output signal
+    output reg                 o_uart_tx
+);
+```
 
-* 输入 **addr\n** 可以读出 BRAM addr 地址处的数据（以十六进制），例如，输入 **12\n** 能读出 地址 0x12 处的数据。
-* 输入 **addr data\n** 可以将 data 写入BRAM地址addr（以十六进制），例如，输入 **12 deadbeef\n** 代表将 0xdeadbeef 写入 地址0x12。
+UART发送器内部有一个FIFO，缓存暂时未发送的数据。所以，发送数据的方式是向FIFO中写入数据。写FIFO的波形图如图1，其中 tx_en 和 tx_rdy 构成了握手信号，这张图中它连续向FIFO写入了5个数据，期间 tx_en 置1，代表持续的写入请求，前四个数据时 tx_rdy=1，说明它们在一个周期内就成功写入。第5个数据时 tx_rdy=0，说明FIFO满了，则 tx_en 和 tx_data 要持续保持直到 wgnt=1 为止，第5个数据才被成功写入。
 
-实际上，debug_uart.sv 将 **addr\n** 这样的指令转化成了总线上的读请求；将 **addr data\n** 这样的指令转化成了总线上的写请求。读写请求时序图如下。
+|     ![](./figures/uart_tx.png)     |
+| :--------------------------------: |
+| 图1：向 uart_tx 中发送数据的波形图 |
 
-![时序图](./images/debug_uart.png)
+uart_tx.sv 的其它说明：
 
-* 当用户发送 **addr data\n** 这样的指令时，debug_uart 对外发起一次写请求，将wreq置高，同时给出waddr和wdata，直到响应产生为止（wgnt=1）。
-* 当用户发送 **addr\n** 这样的指令时，debug_uart 对外发起一次读请求，将rreq置高，同时给出raddr，直到产生响应为止（rgnt=1）。然后debug_uart捕获 rdata上的数据并反馈给上位机。至于捕获rdata的时机，有两种策略，debug_uart有一个参数叫READ_IMM，当READ_IMM=1时，rdata在rgnt=1时的那一时钟周期被捕获（如上图左）。当READ_IMM=0时，rdata在rgnt=1时的下一个时钟周期被捕获（如上图右）。
+- CLK_DIV 是分频系数，决定了 UART波特率， UART波特率 = clk频率 / CLK_DIV 。
+- PARITY 决定了校验位，"NONE"是无校验位，"ODD"是奇校验位，"EVEN"是偶校验位。
+- DWIDTH 决定了每个数据具有多少个字节，也就是 tx_data 的数据位宽，1代表1字节，2代表2字节...
+- ENDIAN 决定了字节序：
+  - "LITTLE"是小端序，代表数据中的低字节先发送；
+  - "BIG"是大端序，代表数据中的高字节先发送。
+- MODE 决定了发送模式：
+  - "RAW"是直接发送字节；
+  - "PRINTABLE"是只发送ASCII可打印字节，跳过不可打印字节；
+  - "HEX"是十六进制打印模式，对于一个字节 0xAB ，它实际上会转化成两个字节 "A", "B" 来发送。
+  - "HEXSPACE"是十六进制加空格打印模式，对于一个字节 0xAB ，它实际上会转化成三个字节 "A", "B", " "(空格) 来发送。
+- END_OF_DATA 决定了是否在每个数据后额外加一个字节：
+  - 如果让 END_OF_DATA="" ，则不发送额外的字节。
+  - 可以让 END_OF_DATA="\n" ，这样每次发送完一个数据就发送一个换行。
+- END_OF_PACK 决定了是否在每次 tx_last=1 的数据后额外加一个字节。在输入 tx_data 的同时，你可以令 tx_last=1 ，这样：
+  - 如果让 END_OF_PACK="" ，则不发送额外的字节。
+  - 可以让 END_OF_PACK="E" ，发送完该数据时，就发送一个 "E"。
+- rstn 是复位，在开始时让 rstn=0 来复位，然后让 rstn=1 释放复位。
+- clk 是时钟。
+- o_uart_tx 是 UART 发送信号。
 
-> debug_uart 等待读写响应都可以设置超时，超时周期在debug_uart.sv的parameter中设置（详见注释）。当发生超时时，debug_uart结束读写请求，并反馈timeout给上位机。
 
-除了调试BRAM，debug_uart还在笔者的其它项目中被用到：
 
-* [SDRAM-Controller项目](https://github.com/WangXuan95/SDRAM-Controller) 中，用来调试SDRAM的读写
-* [USTC-RVSoC项目](https://github.com/WangXuan95/USTC-RVSoC) 中，用来作为SoC总线调试器，完成程序上传、内存查看等功能（有所修改）
+
+# UART交互式调试器 debug_uart
+
+UART交互式调试器的代码文件是 [RTL/debug_uart.sv](./RTL/debug_uart.sv)，它能接收上位机的 UART 命令，完成总线读写或存储器读写，并将结果反馈给上位机。是调试存储器或SoC系统的有效工具。
+
+debug_uart 定义如下：
+
+```verilog
+module debug_uart #(
+    parameter  UART_CLK_DIV = 434, // UART baud rate = clk freq/UART_CLK_DIV. for example, when clk=50MHz, UART_CLK_DIV=434 , then baud=50MHz/434=115200
+    parameter  AWIDTH       = 4,   // address width = 4bytes = 32bits
+    parameter  DWIDTH       = 4,   // data width = 4bytes = 32bits
+    parameter  WR_TIMEOUT   = 500, // wait for wr_rdy cycles
+    parameter  RD_TIMEOUT   = 500, // wait for rd_rdy cycles
+    parameter  READ_IMM     = 0    // 0: read after rd_rdy: Capture rd_data in the next clock cycle of rd_rdy=1
+                                   // 1: read immediately : Capture rd_data in the clock cycle of rd_rdy=1
+)(
+    input  wire                rstn,
+    input  wire                clk,
+    // UART
+    input  wire                i_uart_rx,
+    output reg                 o_uart_tx,
+    // bus write interface
+    output reg                 wr_en,
+    input  wire                wr_rdy,
+    output reg  [AWIDTH*8-1:0] wr_addr,
+    output reg  [DWIDTH*8-1:0] wr_data,
+    // bus read  interface
+    output reg                 rd_en,
+    input  wire                rd_rdy,
+    output reg  [AWIDTH*8-1:0] rd_addr,
+    input  wire [DWIDTH*8-1:0] rd_data
+);
+```
+
+debug_uart 的使用方式是：
+
+* 通过 UART 给它发送 **addr\n** ，就可以在 bus read interface 上发起一个读请求。例如，输入 **12\n** 能发起一个 rd_addr=0x12 的读请求。
+* 输入 **addr data\n** ，就可以在 bus write interface 上发起一个写请求。例如，输入 **12 deadbeef\n** 能发起一个 rd_addr=0x12 的读请求，数据 wr_data=0xdeadbeef 。
+
+读请求、写请求的时序如下图。注意到 READ_IMM 参数会决定读请求时采样 rd_data 的时刻。
+
+|                ![](./figures/debug_uart.png)                 |
+| :----------------------------------------------------------: |
+| 图2：写请求（左）、读请求 READ_IMM=1（中）、读请求 READ_IMM=0（右） |
+
+
+
+# 仿真
+
+仿真相关的文件都在 SIM 文件夹中，其中：
+
+- tb_uart_tx_uart_rx.sv 是 uart_tx 和 uart_rx 的联合仿真代码，它把 uart_tx 和 uart_rx 的 UART 信号连起来，所以在 uart_tx 发送的数据会在 uart_rx 上接收到。
+- tb_uart_tx_uart_rx_run_iverilog.bat 包含了运行 iverilog 仿真的命令。
+- tb_debug_uart.sv 是针对 debug_uart 的仿真代码。
+- tb_debug_uart_run_iverilog.bat 包含了运行 iverilog 仿真的命令。
+
+使用 iverilog 进行仿真前，需要安装 iverilog ，见：[iverilog_usage](https://github.com/WangXuan95/WangXuan95/blob/main/iverilog_usage/iverilog_usage.md)
+
+然后双击 tb_uart_tx_uart_rx_run_iverilog.bat 或 tb_debug_uart_run_iverilog.bat 运行仿真，然后可以打开生成的 dump.vcd 文件查看波形。
