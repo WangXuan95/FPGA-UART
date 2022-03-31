@@ -36,7 +36,7 @@ module uart_rx #(
 - rstn 是复位，在开始时让 rstn=0 来复位，然后让 rstn=1 释放复位。
 - clk 是时钟。
 - i_uart_rx 是 UART 接收信号。
-- **rx_data 和 rx_en 信号**：当 rx_en=1 时，说明模块接收到一个字节的 UART 数据，同时该字节在 rx_data 有效（此时可以被捕获），data将会持续保持有效直到下一个done=1来临。
+- **rx_data 和 rx_en 信号**：当 rx_en=1 时，说明模块接收到一个字节的 UART 数据，同时该字节在 rx_data 有效。
 
 
 
