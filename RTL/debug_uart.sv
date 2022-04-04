@@ -38,7 +38,7 @@ module debug_uart #(
 
 initial {wr_en, wr_addr, wr_data} = '0;
 initial {rd_en, rd_addr} = '0;
-initial o_uart_tx = '0;
+initial o_uart_tx = 1'b1;
 
 localparam MSG_LEN = 7;
 localparam TX_LEN = (DWIDTH*2>MSG_LEN) ? DWIDTH*2 : MSG_LEN;
@@ -132,12 +132,12 @@ always @ (posedge clk or negedge rstn)
                     if(rxshift == 6'b111_000) stat <= S_DATA;
                 end
                 S_DATA: begin
-                    rxcnt <= rxcnt + 6'd1;
+                    rxcnt <= rxcnt + 5'd1;
                     if(rxcnt[1:0] == '1) rxdata <= {rbit, rxdata[7:1]};
                     if(rxcnt      == '1) stat <= S_OKAY;
                 end
                 S_OKAY: begin
-                    rxcnt <= rxcnt + 6'd1;
+                    rxcnt <= rxcnt + 5'd1;
                     if(rxcnt[1:0] == '1) begin
                         rxen <= rbit;
                         stat <= rbit ? S_IDLE : S_FAIL;
@@ -251,7 +251,7 @@ always @ (posedge clk or negedge rstn)
                 if (isnewline(rxdata))
                     fsm <= READ;
                 else if(ishexdigit(rxdata))
-                    taddr <= {taddr, ascii2hex(rxdata)};
+                    taddr <= {taddr[AWIDTH*8-5:0], ascii2hex(rxdata)};
                 else if(iswhite(rxdata))
                     fsm <= EQUAL;
                 else
@@ -274,7 +274,7 @@ always @ (posedge clk or negedge rstn)
                 if( isnewline(rxdata) )
                     fsm <= WRITE;
                 else if( ishexdigit(rxdata) )
-                    wdatareg <= {wdatareg, ascii2hex(rxdata)};  // get a data
+                    wdatareg <= {wdatareg[DWIDTH*8-5:0], ascii2hex(rxdata)};  // get a data
                 else if( iswhite(rxdata) )
                     fsm <= FINAL;
                 else

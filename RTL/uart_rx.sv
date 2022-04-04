@@ -74,16 +74,16 @@ always @ (posedge clk or negedge rstn)
                     if(rxshift == 6'b111_000) stat <= S_DATA;
                 end
                 S_DATA: begin
-                    cnt <= cnt + 6'd1;
+                    cnt <= cnt + 5'd1;
                     if(cnt[1:0] == '1) rx_data <= {rbit, rx_data[7:1]};
                     if(cnt      == '1) stat <= (PARITY=="NONE") ? S_OKAY : S_PARI;
                 end
                 S_PARI: begin
-                    cnt <= cnt + 6'd1;
+                    cnt <= cnt + 5'd1;
                     if(cnt[1:0] == '1) stat <=((PARITY=="EVEN") ^ rbit ^ (^rx_data)) ? S_OKAY : S_FAIL;
                 end
                 S_OKAY: begin
-                    cnt <= cnt + 6'd1;
+                    cnt <= cnt + 5'd1;
                     if(cnt[1:0] == '1) begin
                         rx_en <= rbit;
                         stat <= rbit ? S_IDLE : S_FAIL;

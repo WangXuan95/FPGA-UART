@@ -59,7 +59,7 @@ uart_tx #(
     .ASIZE        ( 3             ),   // Specify tx buffer size
     .DWIDTH       ( 2             ),   // Specify width of tx_data , that is, how many bytes can it input per clock cycle
     .ENDIAN       ( "LITTLE"      ),   // "LITTLE" or "BIG"
-    .MODE         ( "HEXSPACE"         ),   // "RAW", "PRINTABLE", "HEX" or "HEXSPACE"
+    .MODE         ( "HEXSPACE"    ),   // "RAW", "PRINTABLE", "HEX" or "HEXSPACE"
     .END_OF_DATA  ( "\n"          ),
     .END_OF_PACK  ( ""            )
 ) uart_tx_i (
