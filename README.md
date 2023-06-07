@@ -54,7 +54,7 @@ module uart_rx #(
 );
 ```
 
-### 1.1 parameter 配置
+### 1.1 config parameters
 
 - `CLK_FREQ` is the frequency of `clk` . User must correctly config it to get correnct baud rate.
 - `BAUD_RATE` is UART baud rate.
@@ -89,7 +89,7 @@ module uart_rx #(
 
 ### 1.5 `o_overflow` signal
 
-If users frequently make ` o_tready=1` , that is, if the data is not taken away in time, the received data may be stored more and more in module's FIFO. When the FIFO overflow, the newly received bytes will be discarded, and a one-cycle-high-pulse will appear on `o_overflow` . In other cases, `o_overflow` keeps low.
+If users frequently make `o_tready=0` , that is, if the data is not taken away in time, the received data may be stored more and more in module's FIFO. When the FIFO overflow, the newly enqueue bytes will be discarded, and a one-cycle-high-pulse will appear on `o_overflow` . In other cases, `o_overflow` keeps low.
 
 ### 1.6 Baud rate checking
 
@@ -159,7 +159,7 @@ module uart_tx #(
 );
 ```
 
-### 2.2 parameter 配置
+### 2.2 config parameters
 
 - `CLK_FREQ` is the frequency of `clk` . User must correctly config it to get correnct baud rate.
 - `BAUD_RATE` is UART baud rate.
@@ -174,12 +174,12 @@ module uart_tx #(
   - ……
 - When `FIFO_EA` is large (>8), it will be implemented by BRAM.
 
-- `EXTRA_BYTE_AFTER_TRANSFER` is to configure whether an additional byte needs to be sent through UART every time an AXI-stream transfer (i.e. a successful handshake)
-  - If you don't want to send extra bytes, just let `EXTRA_BYTE_AFTER_TRANSFER=""`
-  - If you want to send additional bytes, such as the space byte " ", let  ` EXTRA_BYTE_AFTER_TRANSFER=" "`
-- `EXTRA_BYTE_AFTER_PACKET` is to configure whether an additional byte needs to be sent through UART every time an AXI-stream packet (i.e. a successful handshake and `i_tlast=1`)
-  - If you don't want to send extra bytes, just let `EXTRA_BYTE_AFTER_PACKET=""`
-  - If you want to send additional bytes, such as the new-line byte "\n", let  ` EXTRA_BYTE_AFTER_PACKET="\n"`
+- `EXTRA_BYTE_AFTER_TRANSFER` is to configure whether an extra byte needs to be sent through UART every time an AXI-stream transfer (i.e. a successful handshake)
+  - If you don't want to send the extra byte, just let `EXTRA_BYTE_AFTER_TRANSFER=""`
+  - If you want to send the extra byte, such as the space byte " ", let  `EXTRA_BYTE_AFTER_TRANSFER=" "`
+- `EXTRA_BYTE_AFTER_PACKET` is to configure whether an extra byte needs to be sent through UART at the end of each AXI-stream packet (i.e. `i_tlast=1` when a successful handshake)
+  - If you don't want to send the extra byte, just let `EXTRA_BYTE_AFTER_PACKET=""`
+  - If you want to send the extra byte, such as the new-line byte "\n", let `EXTRA_BYTE_AFTER_PACKET="\n"`
 
 ### 2.2 Clock and reset
 
@@ -261,7 +261,7 @@ module uart2axi4 #(
 );
 ```
 
-### 3.1 parameter 配置
+### 3.1 config parameters
 
 - `CLK_FREQ` is the frequency of `clk` . User must correctly config it to get correnct baud rate.
 - `BAUD_RATE` is UART baud rate.
@@ -483,7 +483,7 @@ module uart_rx #(
 
 ### 1.5 溢出信号 `o_overflow` 
 
-如果用户经常让 `o_tready=1` ，也即不及时拿走数据，则接受数据会在模块里的缓存里越攒越多，当缓存溢出时，新接收到的字节会被丢弃，并在 `o_overflow` 信号上产生一个周期的高电平脉冲。否则 `o_overflow` 一直保持 0 。
+如果用户经常让 `o_tready=0` ，也即不及时拿走数据，则接受数据会在模块里的缓存里越攒越多，当缓存溢出时，新接收到的字节会被丢弃，并在 `o_overflow` 信号上产生一个周期的高电平脉冲。否则 `o_overflow` 一直保持 0 。
 
 ### 1.6 波特率检查
 
