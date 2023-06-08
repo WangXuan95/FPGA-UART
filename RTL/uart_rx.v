@@ -4,7 +4,7 @@
 // Type    : synthesizable, IP's top
 // Standard: Verilog 2001 (IEEE1364-2001)
 // Function: input  UART signal,
-//           output AXI-stream (configurable byte data width)
+//           output AXI-stream (1 byte data width)
 //--------------------------------------------------------------------------------------------------------
 
 module uart_rx #(
